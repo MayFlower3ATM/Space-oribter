@@ -11,6 +11,23 @@ function updateFps(fps)
 	document.getElementById("fps").innerText = "FPS: " + Math.floor(fps);
 }
 
+const G = 0.0000000000667;
+
+
+function calculateGravity(object1, object2) //object1 is the lighter object
+{
+	const r = object1.position.distanceTo(object2.position);
+	if(r < 3)
+		return 0;
+
+	let gravity = (object1.mass + object2.mass * G)/(r*r);
+
+	let gravityAcceleration = gravity/object2.mass; //a=F/m
+	let relativePosition = object1.position.clone().add(object2.position.clone().negate());
+	let gravityVector = relativePosition.multiplyScalar(-gravityAcceleration);
+	return gravityVector;
+}
+
 function main()
 {
 	const scene = new THREE.Scene();
@@ -79,7 +96,7 @@ let planet1Loaded = false;
 
 		playerMesh.castShadow = true;
 		playerMesh.receiveShadow = true;
-		playerMesh.mass = 100;
+		playerMesh.mass = 300;
 
 		scene.add( playerMesh );
 		playerMesh.position.set(0, 0, 0); //spawn 40m over planet2
@@ -114,7 +131,7 @@ let planet1Loaded = false;
 
 		scrap.castShadow = true;
 		scrap.receiveShadow = true;
-		scrap.mass = 30;
+		scrap.mass = 200;
 
 		scene.add( scrap );
 		scrap.position.set(-300, 400, -150);
@@ -144,6 +161,49 @@ let planet1Loaded = false;
 		return false; 
 	}, false);
 
+
+
+
+
+
+	let oldFrameDate = performance.now();
+	let fpsTimer = 0;
+	let tenFramesLengthOld = 0;
+	let tenFramesLengthRaw = 0;
+
+
+	const overShip = 0.1;
+	let velocity = new THREE.Vector3();
+	velocity.z = 8;
+
+	let velocityScrap = new THREE.Vector3();
+	velocityScrap.z = 15;
+
+	setInterval(()=>{ //its more accurate
+		if(!(playerLoaded && planet1Loaded) )
+			return;
+		let gravP1 = calculateGravity(planet1, playerMesh);
+		let gravP2 = calculateGravity(planet2, playerMesh);
+
+		let gravSP1 = calculateGravity(planet1, scrap);
+		let gravSP2 = calculateGravity(planet2, scrap);
+
+
+
+		velocity.add(gravP2.multiplyScalar(1));
+		velocity.add(gravP1.multiplyScalar(1));
+
+		velocityScrap.add(gravSP1.multiplyScalar(1));
+		velocityScrap.add(gravSP2.multiplyScalar(1));
+
+		playerMesh.position.x -= velocity.x * 1 * 0.01; //physics of movement
+		playerMesh.position.y -= velocity.y * 1 * 0.01;
+		playerMesh.position.z -= velocity.z * 1 * 0.01;
+
+		scrap.position.x -= velocityScrap.x * 1 * 0.01;
+		scrap.position.y -= velocityScrap.y * 1 * 0.01;
+		scrap.position.z -= velocityScrap.z * 1 * 0.01;
+	}, 1);
 
 
 	function animate()
@@ -177,7 +237,7 @@ let planet1Loaded = false;
 		camera.position.z = playerMesh.position.z +currentRotation.z;
 		camera.position.y = playerMesh.position.y + currentRotation.y; //camera following player spaceship
 
-		playerMesh.rotation.x = camera.rotation.x; //clone nie działa, TODO naprawic napisać sensownie
+		playerMesh.rotation.x = camera.rotation.x;
 		playerMesh.rotation.y = camera.rotation.y;
 		playerMesh.rotation.z = camera.rotation.z;
 		playerMesh.rotation.order = camera.rotation.order;
