@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import * as Movement from './movement.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
+let score;
+function updateScore(score)
+{
+	document.getElementById("score").innerText = "Score: " + score;
+}
 
 let fpsSmooth = 60;
 let cameraDistance = 4;
@@ -18,12 +23,13 @@ function calculateGravity(object1, object2) //object1 is the lighter object
 {
 	const r = object1.position.distanceTo(object2.position);
 	if(r < 3)
-		return 0;
+		return new THREE.Vector3(0,0,0);
 
 	let gravity = (object1.mass + object2.mass * G)/(r*r);
 
 	let gravityAcceleration = gravity/object2.mass; //a=F/m
 	let relativePosition = object1.position.clone().add(object2.position.clone().negate());
+	relativePosition.normalize();
 	let gravityVector = relativePosition.multiplyScalar(-gravityAcceleration);
 	return gravityVector;
 }
@@ -96,7 +102,7 @@ let planet1Loaded = false;
 
 		playerMesh.castShadow = true;
 		playerMesh.receiveShadow = true;
-		playerMesh.mass = 300;
+		playerMesh.mass = 200;
 
 		scene.add( playerMesh );
 		playerMesh.position.set(0, 0, 0); //spawn 40m over planet2
@@ -116,7 +122,7 @@ let planet1Loaded = false;
 
 		planet2.castShadow = true;
 		planet2.receiveShadow = true;
-		planet2.mass = 100;
+		planet2.mass = 20000;
 
 		scene.add( planet2 );
 		planet2.position.set(120, 0, 0);
@@ -131,7 +137,7 @@ let planet1Loaded = false;
 
 		scrap.castShadow = true;
 		scrap.receiveShadow = true;
-		scrap.mass = 200;
+		scrap.mass = 100;
 
 		scene.add( scrap );
 		scrap.position.set(-300, 400, -150);
@@ -145,7 +151,7 @@ let planet1Loaded = false;
 
 		planet1.castShadow = true;
 		planet1.receiveShadow = true;
-		planet1.mass = 100;
+		planet1.mass = 20000;
 
 		scene.add( planet1 );
 		planet1.position.set(-130, 400, -150);
