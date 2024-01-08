@@ -3,7 +3,9 @@ let keys =
 	xRotation: 0,
 	yRotation: 0,
 	zRotation: 0,
-	accelerate: 0
+	accelerateZ: 0,
+	accelerateX: 0,
+	magnet: 0
 };
 
 let direction = 
@@ -47,17 +49,30 @@ function setupMouseAndKeyboard(renderer)
 				keys.zRotation = 1;
 				break;
 
-			case "Space":
-				keys.accelerate = 1;
+			case "ArrowUp":
+				keys.accelerateZ = 1;
 				break;
 
-			case "Shift":
-				keys.accelerate = -1;
+			case "ArrowDown":
+				keys.accelerateZ = -1;
 				break;
 
-			default:
+			case "ArrowLeft":
+				keys.accelerateX = 1;
 				break;
-		}
+
+			case "ArrowRight":
+				keys.accelerateX = -1;
+				break;
+
+			case "KeyM":
+				keys.magnet = 1;
+				break;
+
+				default:
+					break;
+			}
+			console.log(e.code);
 	};
 
 	document.onkeyup = function (e) {
@@ -75,19 +90,21 @@ function setupMouseAndKeyboard(renderer)
 			case "KeyE":
 				keys.zRotation = 0;
 				break;
-			case "Space":
-			case "KeyShift":
-				keys.accelerate = 0;
-				break;
+				case "ArrowUp":
+				case "ArrowDown":
+					keys.accelerateZ = 0;
+				case "ArrowLeft":
+				case "ArrowRight":
+					keys.accelerateX = 0;
+					break;
+
+				case "KeyM":
+					keys.magnet = 0;
+					break;
 			default:
 				break;
 		}
 	};
 }
 	
-	
-	  
-
-
-
-export {keys, direction, setCurrentDelta, setupMouseAndKeyboard};
+	export {keys, direction, setCurrentDelta, setupMouseAndKeyboard};

@@ -1,5 +1,8 @@
 import * as THREE from 'three';
+import calculateGravity from './gravity.js';
 import * as Movement from './movement.js';
+import StandardOrbit from './orbit.js';
+
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
 let score;
@@ -16,23 +19,6 @@ function updateFps(fps)
 	document.getElementById("fps").innerText = "FPS: " + Math.floor(fps);
 }
 
-const G = 0.0000000000667;
-
-
-function calculateGravity(object1, object2) //object1 is the lighter object
-{
-	const r = object1.position.distanceTo(object2.position);
-	if(r < 3)
-		return new THREE.Vector3(0,0,0);
-
-	let gravity = (object1.mass + object2.mass * G)/(r*r);
-
-	let gravityAcceleration = gravity/object2.mass; //a=F/m
-	let relativePosition = object1.position.clone().add(object2.position.clone().negate());
-	relativePosition.normalize();
-	let gravityVector = relativePosition.multiplyScalar(-gravityAcceleration);
-	return gravityVector;
-}
 
 function main()
 {
@@ -102,11 +88,15 @@ let planet1Loaded = false;
 
 		playerMesh.castShadow = true;
 		playerMesh.receiveShadow = true;
-		playerMesh.mass = 200;
+
+		playerMesh.velocity = new THREE.Vector3(0, 0, 0);
+		playerMesh.mass = 70;
+		playerMesh.velocity.z = 25;
 
 		scene.add( playerMesh );
 		playerMesh.position.set(0, 0, 0); //spawn 40m over planet2
 		playerLoaded = true;
+		const hex = 0xffff00;
 
 	} );
 
@@ -122,7 +112,7 @@ let planet1Loaded = false;
 
 		planet2.castShadow = true;
 		planet2.receiveShadow = true;
-		planet2.mass = 20000;
+		planet2.mass = 100000000000;
 
 		scene.add( planet2 );
 		planet2.position.set(120, 0, 0);
@@ -137,10 +127,13 @@ let planet1Loaded = false;
 
 		scrap.castShadow = true;
 		scrap.receiveShadow = true;
-		scrap.mass = 100;
+
+		scrap.mass = 30;
+		scrap.velocity = new THREE.Vector3(0, 0, 0);
+		scrap.velocity.x = 17;
 
 		scene.add( scrap );
-		scrap.position.set(-300, 400, -150);
+		scrap.position.set(-4000, 0, 200);
 
 	} );
 
@@ -151,10 +144,10 @@ let planet1Loaded = false;
 
 		planet1.castShadow = true;
 		planet1.receiveShadow = true;
-		planet1.mass = 20000;
+		planet1.mass = 100000000000;
 
 		scene.add( planet1 );
-		planet1.position.set(-130, 400, -150);
+		planet1.position.set(-4000, 0, 0);
 		planet1Loaded = true;
 
 	} );
@@ -179,11 +172,8 @@ let planet1Loaded = false;
 
 
 	const overShip = 0.1;
-	let velocity = new THREE.Vector3();
-	velocity.z = 8;
-
-	let velocityScrap = new THREE.Vector3();
-	velocityScrap.z = 15;
+	
+	const stepTime = 0.01;
 
 	setInterval(()=>{ //its more accurate
 		if(!(playerLoaded && planet1Loaded) )
@@ -194,31 +184,62 @@ let planet1Loaded = false;
 		let gravSP1 = calculateGravity(planet1, scrap);
 		let gravSP2 = calculateGravity(planet2, scrap);
 
+		playerMesh.velocity.add(gravP2.multiplyScalar(stepTime));
+		playerMesh.velocity.add(gravP1.multiplyScalar(stepTime));
 
+		scrap.velocity.add(gravSP1.multiplyScalar(stepTime));
+		scrap.velocity.add(gravSP2.multiplyScalar(stepTime));
 
-		velocity.add(gravP2.multiplyScalar(1));
-		velocity.add(gravP1.multiplyScalar(1));
+		if(Movement.keys.magnet == 1)
+		{
+			if(scrap.position.distanceTo(playerMesh.position) < 40)
+			{
+				//let distanceBetween = scrap.position.clone().negate().add(playerMesh.position);
+				//scrap.position.add(distanceBetween.multiplyScalar(0.01));
 
-		velocityScrap.add(gravSP1.multiplyScalar(1));
-		velocityScrap.add(gravSP2.multiplyScalar(1));
+				scene.remove(scrap);
+			}
+			console.log("m");
+		}
 
-		playerMesh.position.x -= velocity.x * 1 * 0.01; //physics of movement
-		playerMesh.position.y -= velocity.y * 1 * 0.01;
-		playerMesh.position.z -= velocity.z * 1 * 0.01;
+		playerMesh.position.add(playerMesh.velocity.clone().multiplyScalar(-1 * stepTime)); //physics of movement
+		scrap.position.add(scrap.velocity.clone().multiplyScalar(-1 * stepTime));
 
-		scrap.position.x -= velocityScrap.x * 1 * 0.01;
-		scrap.position.y -= velocityScrap.y * 1 * 0.01;
-		scrap.position.z -= velocityScrap.z * 1 * 0.01;
-	}, 1);
+	}, stepTime*1000);
 
+	let orbit;
+	let orbitScrap;
+	let playerRotationOverlay = new THREE.Vector3(0, 0, 0);
+	
+	let executeOnce = true;
 
 	function animate()
 	{
-		
+
 		requestAnimationFrame( animate );
 		if(!(playerLoaded && planet1Loaded) )
-		return;
+			return;
 
+		if(executeOnce)
+		{
+			executeOnce = false;
+			orbit = new StandardOrbit(scene, playerMesh, 0xff0000);
+			orbit.addPulledBy(planet1);
+			orbit.addPulledBy(planet2);
+
+			orbitScrap = new StandardOrbit(scene, scrap, 0x464646);
+			orbitScrap.addPulledBy(planet1);
+			orbitScrap.addPulledBy(planet2);
+
+
+			
+			setInterval(()=>{
+				orbit.updateOrbit(0.1);
+				orbitScrap.updateOrbit(0.1);
+		
+			}, stepTime*1000);
+		
+		}
 
 		let current = performance.now();
 		currentFrameLength = Math.max(current - oldFrameDate, 1);
@@ -227,14 +248,9 @@ let planet1Loaded = false;
 
 		//Movement.setCurrentDelta(currentFrameLength); //this maybe could be useful if all physics and movement were moved into movement.js
 
-
-
-		camera.rotateZ(Movement.keys.zRotation*0.001*currentFrameLength); //controls
-		camera.rotateY(Movement.keys.yRotation*0.001*currentFrameLength);
-		camera.rotateX(Movement.keys.xRotation*0.001*currentFrameLength);
-
-
-		
+		camera.rotateZ(Movement.keys.zRotation*0.002*currentFrameLength); //controls
+		camera.rotateY(Movement.keys.yRotation*0.002*currentFrameLength);
+		camera.rotateX(Movement.keys.xRotation*0.002*currentFrameLength);
 
 
 		let currentRotation = new THREE.Vector3(0, 0, cameraDistance);
@@ -247,20 +263,14 @@ let planet1Loaded = false;
 		playerMesh.rotation.y = camera.rotation.y;
 		playerMesh.rotation.z = camera.rotation.z;
 		playerMesh.rotation.order = camera.rotation.order;
-		playerMesh.rotateX(0.4);
 
-		let acc = new THREE.Vector3(0,0,  Movement.keys.accelerate*0.01);
-		velocity.add(acc.applyEuler(playerMesh.rotation));
+		let acc = new THREE.Vector3(Movement.keys.accelerateX*0.02 ,0,  Movement.keys.accelerateZ*0.02);
+		playerMesh.velocity.add(acc.applyEuler(camera.rotation));
 
 		//for spaceship
 	
 		playerMesh.rotateX(Math.PI/2); //because playerMesh model is rotated and any prevoius rotating model would be overridden 
 		playerMesh.rotateZ(Math.PI/2);
-
-		
-		
-		
-
 	
 
 		if(fpsTimer++ >= 19)
@@ -274,7 +284,7 @@ let planet1Loaded = false;
 		renderer.render( scene, camera );  
  	}
 	
-		animate();
+		animate();	
 }
 
 
