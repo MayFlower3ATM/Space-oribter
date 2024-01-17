@@ -198,6 +198,7 @@ let planet1Loaded = false;
 				//scrap.position.add(distanceBetween.multiplyScalar(0.01));
 
 				scene.remove(scrap);
+				score = score + 1;
 			}
 			console.log("m");
 		}
